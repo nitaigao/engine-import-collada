@@ -38,217 +38,182 @@ public:
     , z(z_up ? y_ : z_)
     { }
 
+
   float x, y, z;
 };
+
+std::ostream& operator<< (std::ostream &os, Vertex &vertex)
+{
+  os << vertex.x << " " << vertex.y << " " << vertex.z;
+  return os;
+}
 
 typedef std::vector<Vertex> VertexList;
 
 class Geometry
 {
+  typedef std::vector<float> FloatList;
 
 public:
+
+  void load_element(TiXmlElement* element)
+  {
+    std::clog << vertices_.size() << " " << vertices_.empty() << std::endl;
+
+    if (vertices_.empty())
+    {
+      std::clog << "loading vertices" << std::endl;
+      
+      TiXmlElement* polylist = element_
+        ->FirstChild("mesh")
+        ->FirstChild("polylist")
+        ->ToElement();
+
+      TiXmlElement* vertex_input = polylist
+        ->FirstChild("input")
+        ->ToElement();
+
+      int vertex_offset = 0;
+      vertex_input->QueryIntAttribute("offset", &vertex_offset);
+
+      std::string indices_raw = polylist
+        ->FirstChild("p")
+        ->ToElement()
+        ->GetText();
+
+      FloatList indices;
+      split(indices_raw, " ", indices);
+
+      FloatList vertex_indices;
+
+      int offset = 0;
+      for(int i = 0; i < indices.size(); i++)
+      {
+        if (offset++ > 0)
+        {
+          offset = 0;
+          continue;
+        }
+
+        vertex_indices.push_back(indices[i]);
+      }
+
+      std::string positions_raw = element_
+        ->FirstChild("mesh")
+        ->FirstChild("source")
+        ->FirstChild("float_array")
+        ->ToElement()
+        ->GetText();
+
+      FloatList positions;
+      split(positions_raw, " ", positions);
+
+      for(FloatList::iterator i = vertex_indices.begin(); i != vertex_indices.end(); ++i)
+      {
+        int position_index = (*i) * 3;
+
+        Vertex vertex(positions[position_index], 
+                      positions[position_index + 1], 
+                      positions[position_index + 2],
+                      true);
+
+        vertices_.push_back(vertex);
+      }
+
+      std::clog << "loaded vertices" << std::endl;
+    }
+  }
 
   Geometry(TiXmlElement* element)
     : element_(element)
   {
+    load_element(element);
   }
 
-  std::vector<float> vertices()
+  VertexList vertices()
   {
-    TiXmlElement* polylist = element_
-      ->FirstChild("mesh")
-      ->FirstChild("polylist")
-      ->ToElement();
-
-
-    TiXmlElement* vertex_input = polylist
-      ->FirstChild("input")
-      ->ToElement();
-
-    int vertex_offset = 0;
-    vertex_input->QueryIntAttribute("offset", &vertex_offset);
-    
-    TiXmlElement* normal_input = vertex_input
-      ->NextSiblingElement("input")
-      ->ToElement();
-    
-    int normal_offset = 0;
-    normal_input->QueryIntAttribute("offset", &normal_offset);
-
-    std::string indices_raw = polylist
-      ->FirstChild("p")
-      ->ToElement()
-      ->GetText();
-
-    std::vector<float> indices;
-    split(indices_raw, " ", indices);
-
-    std::vector<float> vertex_indices;
-
-    int offset = 0;
-    for(int i = 0; i < indices.size(); i++)
-    {
-      if (offset == normal_offset)
-      {
-        offset = 0;
-        continue;
-      }
-
-      offset += 1;
-      vertex_indices.push_back(indices[i]);
-    }
-
-    std::string positions_raw = element_
-      ->FirstChild("mesh")
-      ->FirstChild("source")
-      ->FirstChild("float_array")
-      ->ToElement()
-      ->GetText();
-
-    std::vector<float> positions;
-    split(positions_raw, " ", positions);
-
-    std::vector<float> vertices;
-
-    for(int i = 0; i < vertex_indices.size(); ++i)
-    {
-      vertices.push_back(positions[i]);
-      vertices.push_back(positions[i+1]);
-      vertices.push_back(positions[i+2]);
-    }
-
-    return vertices;
+    std::clog << vertices_.size() << std::endl;
+    return vertices_;
   }
 
 private:
 
   TiXmlElement* element_;
-
+  VertexList vertices_;
 };
 
-class DAEFile
-{
+typedef std::vector<Geometry> GeometryList;
 
-public:
-
-  DAEFile() { };
-
-  void load(const std::string& path)
-  {
-    bool loadOkay = doc_.LoadFile(path.c_str());
-
-    if (loadOkay)
-    {
-      deserialize(doc_.RootElement()->FirstChild());
-    }
-    else
-    {
-      std::clog << "Failed to load file" << std::endl;
-    }    
-  }
-
-  VertexList vertices()
-  {
-    VertexList vertices;
-    std::vector<float> points = deserialize(doc_.RootElement()->FirstChild());
-
-    for(int i = 0; i < points.size();)
-    {
-      Vertex vertex(points[i++], points[i++], points[i++], true);
-      vertices.push_back(vertex);
-    }
-
-    return vertices;
-  }
-
-  std::vector<float> deserialize(TiXmlNode* element)
-  {
-    if (strcmp(element->Value(), "library_geometries") == 0)
-    {
-      return deserialize(element->FirstChild());
-    }
-
-    if (strcmp(element->Value(), "geometry") == 0)
-    {
-      return Geometry(element->ToElement()).vertices();
-    }
-
-    TiXmlNode* sibling = element->NextSibling();
-
-    if (sibling)
-    {
-      return deserialize(sibling);
-    }
-
-    return std::vector<float>();
-  }
-
-
-private:
-  
-  TiXmlDocument doc_;
-
-};
+#include "dae_file.hpp"
 
 class Model
 {
+  typedef std::vector<float> FloatList;
 
 public:
 
-  Model(DAEFile& file)
-    : vertices_(file.vertices())
-    { }
+  Model(DAEFile* file)
+    : file_(file)
+    { };
 
-  float* vertice_array()
+  GLfloat* array(const VertexList& vec)
   {
-    float* vertices = new float[vertices_.size()*3];
-
     int j = 0;
-
-    for(VertexList::iterator i = vertices_.begin(); i != vertices_.end(); ++i)
+    GLfloat* float_array = new GLfloat[vec.size() * 3];
+    for (VertexList::const_iterator i = vec.begin(); i != vec.end(); ++i)
     {
-      vertices[j++] = (*i).x;
-      vertices[j++] = (*i).y;
-      vertices[j++] = (*i).z;
+      float_array[j++] = (*i).x;
+      float_array[j++] = (*i).y;
+      float_array[j++] = (*i).z;
     }
-
-    return vertices;
+     
+    return float_array;
   }
 
   void render()
   {
-    glPushMatrix();
+    GeometryList geometries = file_->geometries();
 
-    glEnableClientState(GL_VERTEX_ARRAY);
+    for (GeometryList::iterator i = geometries.begin(); i != geometries.end(); ++i)
+    {
+      glPushMatrix();
 
-    GLfloat* vertices = vertice_array();
+      glEnableClientState(GL_VERTEX_ARRAY);
 
-    glVertexPointer(3, GL_FLOAT, 0, vertices);
-    glDrawArrays(GL_POLYGON, 0, vertices_.size());
+      std::clog << (*i).vertices().size() << std::endl;
 
-    glDisableClientState(GL_VERTEX_ARRAY);
+      GLfloat* vertices = array((*i).vertices());
+      glVertexPointer(3, GL_FLOAT, 0, vertices);
+      glDrawArrays(GL_TRIANGLES, 0, (*i).vertices().size());
 
-    delete[] vertices;
-
-    glPopMatrix();
+      delete[] vertices;
+     
+      glDisableClientState(GL_VERTEX_ARRAY);
+    
+      glPopMatrix();
+    }
   }
 
 public:
 
-  VertexList vertices_;
-  
+  DAEFile* file_;
 };
 
-DAEFile dae;
-Model* model = 0;
+DAEFile* dae = new DAEFile();
+Model* model = new Model(dae);
 
 void render()
 {
+  std::clog << "render" << std::endl;
   glClear(GL_COLOR_BUFFER_BIT);
 
+  glRotatef(0.1, 0.0, 1.0, 0.0);
+  
   model->render();
 
   glutSwapBuffers();
+
+  glutPostRedisplay();
 }
 
 void keyboard(unsigned char key, int x, int y)
@@ -261,7 +226,7 @@ void reshape(int w, int h)
   glViewport(0, 0, (GLsizei) w, (GLsizei) h);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluPerspective(60.0, (GLfloat) w/(GLfloat) h, 1.0, 1000000.0);
+  gluPerspective(60.0, (GLfloat) w/(GLfloat) h, 2.0, 1000000.0);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   gluLookAt (10, 10, -10.00, 
@@ -271,8 +236,7 @@ void reshape(int w, int h)
 
 void init()
 {
-  dae.load("/Users/nk/Desktop/box.dae");  
-  model = new Model(dae);
+  dae->load("/Users/nk/Desktop/box.dae");  
 
   glClearColor(0.00, 0.0, 0.0, 1.0);
   glShadeModel(GL_SMOOTH);
