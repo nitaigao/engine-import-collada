@@ -19,12 +19,10 @@ public:
     }    
   }
 
-  GeometryList geometries()
+  Geometry::GeometryList geometries()
   {
-    std::clog << "checking geometries" << std::endl;
     if (geometries_.empty())
     {
-      std::clog << "loading geometries" << std::endl;
       TiXmlElement* element = doc_.RootElement()->FirstChild("library_geometries")->ToElement();
 
       for(TiXmlNode* child = element->FirstChild(); child != 0; child = child->NextSibling())
@@ -32,8 +30,6 @@ public:
         Geometry geometry(child->ToElement());
         geometries_.push_back(geometry);
       }
-      
-      std::clog << "loaded geometries" << std::endl;
     }
     
     return geometries_;
@@ -42,6 +38,6 @@ public:
 private:
   
   TiXmlDocument doc_;
-  GeometryList geometries_;
+  Geometry::GeometryList geometries_;
 
 };
