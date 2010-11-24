@@ -1,0 +1,1 @@
+clang++ -I /System/Library/Frameworks/OpenGL.framework/Headers -I /System/Library/Frameworks/GLUT.framework/Headers -l tinyxml -framework OpenGL -framework GLUT main.cpp && ./a.out

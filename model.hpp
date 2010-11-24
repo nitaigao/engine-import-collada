@@ -33,9 +33,6 @@ public:
       glEnableClientState(GL_VERTEX_ARRAY);
       glEnableClientState(GL_NORMAL_ARRAY);
 
-      GLfloat light_position[] = { 0.0f,0.0f,-1.0f,0.0f };
-      glLightf(GL_LIGHT0, GL_POSITION, light_position);
-
       GLfloat* vertices = array((*i).vertices());
       Vertex::VertexList verts = (*i).vertices();
       glVertexPointer(3, GL_FLOAT, 0, vertices);

@@ -19,7 +19,10 @@ ModelList models;
 
 void render()
 {
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  GLfloat light_position[] = { 0.0f, 0.0f, -1.0f, 0.0f };
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
   glPushMatrix();
 
@@ -67,6 +70,7 @@ void init()
   glClearColor(1.00, 0.0, 0.0, 1.0);
   glShadeModel(GL_SMOOTH);
 
+  glEnable(GL_DEPTH_TEST);
   glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
 }
