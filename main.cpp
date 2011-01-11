@@ -63,7 +63,7 @@ void reshape(int w, int h)
 void init()
 {
   DAEFile* face_dae = new DAEFile();
-  face_dae->load("geometry/planet.dae");  
+  face_dae->load("geometry/face.dae");  
   Model* face = new Model(face_dae);
   models.push_back(face);
 

@@ -5,8 +5,8 @@
       <author>Blender User</author>
       <authoring_tool>Blender 2.55.0 r32738</authoring_tool>
     </contributor>
-    <created>2010-11-21T23:43:24</created>
-    <modified>2010-11-21T23:43:24</modified>
+    <created>2010-11-24T20:10:30</created>
+    <modified>2010-11-24T20:10:30</modified>
     <unit name="meter" meter="1"/>
     <up_axis>Z_UP</up_axis>
   </asset>
@@ -25,7 +25,7 @@
               <color>0 0 0 1</color>
             </ambient>
             <diffuse>
-              <color>0.6400000453 0.6400000453 0.6400000453 1</color>
+              <color>0.6400000453 0 0 1</color>
             </diffuse>
             <index_of_refraction>
               <float>1</float>
